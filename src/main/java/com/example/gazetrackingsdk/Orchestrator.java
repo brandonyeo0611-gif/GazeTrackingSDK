@@ -6,12 +6,16 @@ import java.nio.ByteBuffer;
 
 public class Orchestrator implements FrameListener {
     private final ModelInference modelInference;
+    // modelInference is a class that i made
     private final PreprocessLayer preprocessLayer;
+    private final Postprocessing postprocessing;
     public float[] logits;
 
     Orchestrator(Context context) {
-        this.modelInference = new ModelInference(context.getApplicationContext());
+        this.modelInference = new ModelInference(context);
         this.preprocessLayer = new PreprocessLayer();
+        this.postprocessing = new Postprocessing();
+        // using the same postprocessing so there is kinda like a memory
     }
 
     public void onCapture(Bitmap bitmap) {
@@ -23,7 +27,7 @@ public class Orchestrator implements FrameListener {
         // note that web dev API and this APi call is completely different
     }
 
-    public logits smoothen() {
-
+    public float[] smoothen() {
+        return postprocessing.applySmoothing(logits);
     }
 }

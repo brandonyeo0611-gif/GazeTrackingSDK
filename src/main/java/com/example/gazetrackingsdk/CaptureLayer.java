@@ -17,6 +17,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 
 public class CaptureLayer {
     private Context context;
@@ -24,12 +25,14 @@ public class CaptureLayer {
     private final LifecycleOwner  lifecycleOwner;
     // would be the app
     private final FrameListener frameListener;
+    private final int userID;
 
-    CaptureLayer(Context context, LifecycleOwner lifecycleOwner, FrameListener frameListener) {
+    CaptureLayer(Context context, LifecycleOwner lifecycleOwner, FrameListener frameListener, int userID) {
         this.context = context;
         this.count = 0;
         this.lifecycleOwner = lifecycleOwner;
         this.frameListener = frameListener;
+        this.userID = userID;
     }
 
     public void captureImage() {
@@ -49,26 +52,27 @@ public class CaptureLayer {
                         .build();
                 // stream of image and allows processing on each one
 
-                Executor executor = ContextCompat.getMainExecutor(context);
+                Executor executor = Executors.newSingleThreadExecutor();
+                // dont use main thread use new side thread so parallelism can happen
+                // main thread mainly for interface
 
                 imageAnalysis.setAnalyzer(executor, image -> {
                     try {
                         count += 1;
                         Bitmap bitmap = image.toBitmap();
-                        // pass to preprocess layer through a listener
-                        // get inference
 
-                        // not doing anything currently.
                         // should just pass the bitmap to the preprocess layer --> model --> post --> api?
                         // maybe just return a bytebuffer then the orchestrator layer / API layer will do it
-                        // gpt suggest to use a listener.. idk what that need learn
-                        File file = new File(context.getCacheDir(), "frame_" + count + ".jpg");
-                        // saved in internal cached directory first
+                        File file = new File(context.getCacheDir(), userID + "frame_" + count + ".jpg");
+
                         FileOutputStream outputStream = new FileOutputStream(file);
                         frameListener.onCapture(bitmap);
                         // sends it to orchestrator and orchestrator will save the initial logits
 
                         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+                        // turns it into images
+                        // quality attribute 100 is maximum quality
+                        // these lines of code saves the file in the cached repository WITHIN THE DEVICE for access later
                         outputStream.close();
                     } catch (IOException e) {
                         Log.e("ImageProcessor", "Save failed", e);
@@ -83,7 +87,9 @@ public class CaptureLayer {
                 cameraProvider.unbindAll(); // Best practice to unbind before rebinding
                 cameraProvider.bindToLifecycle(lifecycleOwner, cameraSelector, imageAnalysis);
                 // need to learn more about lifecycle owner
-                // each game is like a lifecycleOwner , settled in the game
+                // each game is like a lifecycleOwner , settled in the game so when game screen appears then start
+                // I assume like within the frontend there could be a countdown as to when the application happens the
+                // it will call the API to set up the capture layer and construct it then do captureImage()?
 
             } catch (Exception e) {
                 Log.e("ImageProcessor", "Binding failed", e);

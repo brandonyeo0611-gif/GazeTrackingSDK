@@ -48,13 +48,15 @@ public class ModelInference {
             Interpreter interpreter = new Interpreter(model);
             // the interpreter is the model
             // interpret whats the input
-            int[] inputShape = interpreter.getInputTensor(0).shape();
-            // should be [1,224,224,3] first one is the batch size i.e. no. of image input in each tensorlite model
-            DataType outputDataType = interpreter.getOutputTensor(0).dataType();
 
-            int inputImageWidth = inputShape[1];
-            int inputImageHeight = inputShape[2];
-            int inputImageDepth = inputShape[3];
+            //int[] inputShape = interpreter.getInputTensor(0).shape();
+            // should be [1,224,224,3] first one is the batch size i.e. no. of image input in each tensorlite model
+            // DataType outputDataType = interpreter.getOutputTensor(0).dataType();
+
+            // int inputImageWidth = inputShape[1];
+            // int inputImageHeight = inputShape[2];
+            // int inputImageDepth = inputShape[3];
+            // currently not using but possible to use for debug in the future
 
 // Finish interpreter initialization
             this.interpreter = interpreter;
