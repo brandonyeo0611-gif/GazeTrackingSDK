@@ -41,7 +41,7 @@ public class Postprocessing {
 
     }
 
-    float[] applySoftmax(float[] logits) {
+    static float[] applySoftmax(float[] logits) {
         // pass in the logits and return the vector with the softmax function applied then can select the argmax to get predicted class
         float sumOfExp = 0.0f;
         float[] sol = new float[9];
@@ -58,7 +58,8 @@ public class Postprocessing {
         return sol;
     }
 
-    Pair<Float,Integer> argmax(float[] result) {
+    static Pair<Float,Integer> ConfnPred(float[] rawLogits) {
+        float[] result = Postprocessing.applySoftmax(rawLogits);
         float max = result[0];
         int n = 0;
         for (int i = 1; i < result.length; i ++) {
@@ -81,6 +82,10 @@ public class Postprocessing {
         for (int i = 0; i < votes.size();i++ ) {
             int pastPredictions = votes.get(i);
             sol[pastPredictions] += 1 * weights[i];
+            // score them based on past predictions and store it in sol variable
+            // sol variable is just a temp array from 1-9 to store the scores
+            // qn : this was the first thing that come to mind for me when I was doing majority vote, are there other better ones?
+
         }
 
         int winner = 0;

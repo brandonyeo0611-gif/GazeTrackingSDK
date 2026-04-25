@@ -56,7 +56,7 @@ public class ModelInference {
             // int inputImageWidth = inputShape[1];
             // int inputImageHeight = inputShape[2];
             // int inputImageDepth = inputShape[3];
-            // currently not using but possible to use for debug in the future
+            // currently not using but possible to use for debug in the future?
 
 // Finish interpreter initialization
             this.interpreter = interpreter;
@@ -74,4 +74,5 @@ public class ModelInference {
             return new float[9];
         }
     }
+    // need to do the platt scaling too
 }
