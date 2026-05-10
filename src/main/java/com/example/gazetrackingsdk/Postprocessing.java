@@ -6,6 +6,7 @@ import java.util.LinkedList;
 
 public class Postprocessing {
     private LinkedList<float[]> logits;
+    private Pair<LinkedList<float[]>, LinkedList<float[]>> calLogits;
     private static final int size = 5;
     private LinkedList<Integer> votes;
     private static final float[] weights = {0.05f, 0.1f, 0.15f, 0.3f, 0.4f};
@@ -40,6 +41,19 @@ public class Postprocessing {
         return sol;
 
     }
+    Pair<Double,Double> PlattScaling(Pair<float[],float[]> calLogits) {
+        this.calLogits.first.addLast(calLogits.first);
+        this.calLogits.second.addLast(calLogits.second);
+        if (this.calLogits.first.size() > 530) {
+            return this.calibrate();
+        }
+        return new Pair<>(0.0,0.0);
+    }
+
+    Pair<Double,Double> calibrate() {
+        var t =
+    }
+
 
     static float[] applySoftmax(float[] logits) {
         // pass in the logits and return the vector with the softmax function applied then can select the argmax to get predicted class
@@ -57,6 +71,7 @@ public class Postprocessing {
 
         return sol;
     }
+
 
     static Pair<Float,Integer> ConfnPred(float[] rawLogits) {
         float[] result = Postprocessing.applySoftmax(rawLogits);
