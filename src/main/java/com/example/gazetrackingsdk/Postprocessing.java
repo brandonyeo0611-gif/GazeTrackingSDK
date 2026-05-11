@@ -5,11 +5,14 @@ import android.util.Pair;
 import java.util.LinkedList;
 
 public class Postprocessing {
-    private LinkedList<float[]> logits;
-    private Pair<LinkedList<float[]>, LinkedList<float[]>> calLogits;
+    private final LinkedList<float[]> logits;
     private static final int size = 5;
-    private LinkedList<Integer> votes;
+    private final LinkedList<Integer> votes;
     private static final float[] weights = {0.05f, 0.1f, 0.15f, 0.3f, 0.4f};
+    Postprocessing() {
+        this.logits = new LinkedList<>();
+        this.votes = new LinkedList<>();
+    }
 
     float[] applySmoothing(float[] rawLogits) {
         logits.addLast(rawLogits);
@@ -41,18 +44,25 @@ public class Postprocessing {
         return sol;
 
     }
-    Pair<Double,Double> PlattScaling(Pair<float[],float[]> calLogits) {
-        this.calLogits.first.addLast(calLogits.first);
-        this.calLogits.second.addLast(calLogits.second);
-        if (this.calLogits.first.size() > 530) {
-            return this.calibrate();
+
+    static LinkedList<float[]> applyScaling(float[] bias, float scalar, LinkedList<float[]> logits) {
+        LinkedList<float[]> result = new LinkedList<>();
+        for (float[] f : logits) {
+            result.add(applyScaling(bias,scalar, f));
         }
-        return new Pair<>(0.0,0.0);
+        return result;
     }
 
-    Pair<Double,Double> calibrate() {
-        var t =
+    static float[] applyScaling(float[] bias, float scalar, float[] logits) {
+        float[] result = new float[9];
+
+        for (int i = 0; i < 9; i++) {
+            result[i] = ( logits[i] + bias[i] ) / scalar;
+        }
+        return result;
     }
+
+
 
 
     static float[] applySoftmax(float[] logits) {
