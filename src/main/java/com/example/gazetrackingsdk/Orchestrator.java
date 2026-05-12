@@ -2,6 +2,9 @@ package com.example.gazetrackingsdk;
 import android.graphics.Bitmap;
 import android.content.Context;
 import android.util.Pair;
+import android.widget.Switch;
+
+import androidx.lifecycle.LifecycleOwner;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -12,10 +15,15 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.concurrent.atomic.AtomicInteger;
-
-abstract class Orchestrator implements FrameListener {
+enum Mode {
+    GAME_A,
+    GAME_B,
+    CALIBRATION
+}
+class Orchestrator implements FrameListener {
     private Context context;
-    private String userID;
+    private int userID;
+    private LifecycleOwner lifecycleOwner;
 
     private Pair<Double,Double> scalar;
     // to do!
@@ -25,9 +33,12 @@ abstract class Orchestrator implements FrameListener {
     private final Postprocessing postprocessingLayerRaw;
     private final Postprocessing postprocessingLayerSmooth;
     private final CalibrationLayer calibrationLayer;
+    private CaptureLayer captureLayer;
     private CsvLogger csvLogger;
     private AtomicInteger count;
-    Orchestrator(Context context, String userID) {
+    private Mode currentMode = Mode.CALIBRATION;
+    private int trueLabel;
+    Orchestrator(Context context, int userID, LifecycleOwner lifecycleOwner) {
         this.context = context;
         this.userID = userID;
         this.count = new AtomicInteger();
@@ -38,17 +49,47 @@ abstract class Orchestrator implements FrameListener {
         this.postprocessingLayerRaw = new Postprocessing();
         this.calibrationLayer = new CalibrationLayer();
         this.csvLogger = new CsvLogger(context, userID);
+        this.lifecycleOwner = lifecycleOwner;
     }
     // there probably should be a switch like there is game 1 game 2 and calibration
     // ultimately the API will call differently method signature to tell the thing what task it is?
     //
 
+    public void startCapturing() {
+        this.captureLayer = new CaptureLayer(context, lifecycleOwner, this, userID);
+        this.captureLayer.captureImage();
+    }
+    public void setMode(Mode mode) {
+        this.currentMode = mode;
+    }
 
-    abstract public void onCapture(Bitmap bitmap);
-    // essentially each game extends from the orchestrator layer
-    // which make sense to me because each game are the ones that kinda decide
-    // what they want to do with the raw image captured
-    // so orchestrator layer should just include methods to use
+    public void setTrueLabel(int label) {
+        this.trueLabel = label;
+    }
+
+    void stop() {
+        this.captureLayer.stop();
+        csvLogger.close();
+    }
+
+    public ByteBuffer getByteBuffer(Bitmap bitmap) {
+        return preprocessLayer.convertBitmapToByteBuffer(bitmap);
+    }
+    public float[] getInference(ByteBuffer byteBuffer) {
+        return modelInference.getInference(byteBuffer);
+    }
+
+    public void onCapture(Bitmap bitmap) {
+        saveCapture(bitmap);
+        ByteBuffer byteBuffer = getByteBuffer(bitmap);
+        float[] logits = getInference(byteBuffer);
+        if (currentMode == Mode.CALIBRATION) {
+            calibrationLayer.add(trueLabel, logits);
+        } else {
+            smoothAndRawLogits(logits);
+        }
+    }
+
 
     public void saveCapture(Bitmap bitmap) {
         try {
@@ -74,11 +115,28 @@ abstract class Orchestrator implements FrameListener {
         } catch (java.io.IOException ignored) {
         }
     }
-    public ByteBuffer getByteBuffer(Bitmap bitmap) {
-        return preprocessLayer.convertBitmapToByteBuffer(bitmap);
-    }
-    public float[] getInference(ByteBuffer byteBuffer) {
-        return modelInference.getInference(byteBuffer);
+
+    // for testing probably we should just use this one
+    void smoothAndRawLogits(float[] logit) {
+        String rawLogitsStr = CsvLogger.saveLogits(logit);
+        Pair<Float, Integer> ConfnPredRaw = Postprocessing.ConfnPred(logit);
+        int MvoteRaw = postprocessingLayerRaw.majorityVote(ConfnPredRaw.second);
+        float[] smoothenLogits = postprocessingLayerSmooth.applySmoothing(logit);
+        String smoothenLogitsStr = CsvLogger.saveLogits(smoothenLogits);
+        Pair<Float, Integer> ConfnPredSmooth = Postprocessing.ConfnPred(smoothenLogits);
+        int MvoteSmooth = postprocessingLayerSmooth.majorityVote(ConfnPredSmooth.second);
+        String[] resultStr = new String[]{
+                String.valueOf(System.currentTimeMillis()),
+                rawLogitsStr,
+                ConfnPredRaw.first.toString(),
+                ConfnPredRaw.second.toString(),
+                String.valueOf(MvoteRaw),
+                smoothenLogitsStr,
+                ConfnPredSmooth.first.toString(),
+                ConfnPredSmooth.second.toString(),
+                String.valueOf(MvoteSmooth) // return Mvote on the smoothened one
+        };
+        csvLogger.writeNext(resultStr);
     }
     void smoothenLogits(float[] logit) {
         float[] smoothenLogits = this.postprocessingLayerSmooth.applySmoothing(logit);
@@ -116,36 +174,4 @@ abstract class Orchestrator implements FrameListener {
         };
         csvLogger.writeNext(resultStr);
     }
-
-    // for testing probably I suggest we should just use this one
-    void smoothAndRawLogits(float[] logit) {
-        String rawLogitsStr = CsvLogger.saveLogits(logit);
-        Pair<Float, Integer> ConfnPredRaw = Postprocessing.ConfnPred(logit);
-        int MvoteRaw = postprocessingLayerRaw.majorityVote(ConfnPredRaw.second);
-        float[] smoothenLogits = postprocessingLayerSmooth.applySmoothing(logit);
-        String smoothenLogitsStr = CsvLogger.saveLogits(smoothenLogits);
-        Pair<Float, Integer> ConfnPredSmooth = Postprocessing.ConfnPred(smoothenLogits);
-        int MvoteSmooth = postprocessingLayerSmooth.majorityVote(ConfnPredSmooth.second);
-        String[] resultStr = new String[]{
-                String.valueOf(System.currentTimeMillis()),
-                rawLogitsStr,
-                ConfnPredRaw.first.toString(),
-                ConfnPredRaw.second.toString(),
-                String.valueOf(MvoteRaw),
-                smoothenLogitsStr,
-                ConfnPredSmooth.first.toString(),
-                ConfnPredSmooth.second.toString(),
-                String.valueOf(MvoteSmooth) // return Mvote on the smoothened one
-        };
-        csvLogger.writeNext(resultStr);
-    }
-
-    void stop() {
-        csvLogger.close();
-    }
-
-
-
-
-    // need to flush else the last few frames may be lost
 }

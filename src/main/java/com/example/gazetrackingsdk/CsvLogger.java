@@ -11,7 +11,7 @@ import java.io.IOException;
 public class CsvLogger {
     private CSVWriter csvWriter;
 
-    CsvLogger(Context context, String user) {
+    CsvLogger(Context context, int user) {
         File directory = new File(context.getFilesDir(), "GazeData");
         // save within local file, to add a method that can just retrieve the csv
         if (!directory.exists()) {

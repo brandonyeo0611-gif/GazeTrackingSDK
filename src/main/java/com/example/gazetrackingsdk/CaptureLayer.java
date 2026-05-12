@@ -25,6 +25,7 @@ public class CaptureLayer {
     private final LifecycleOwner  lifecycleOwner;
     // would be the app
     private final FrameListener frameListener;
+    private ProcessCameraProvider cameraProvider;
     private final int userID;
 
     CaptureLayer(Context context, LifecycleOwner lifecycleOwner, FrameListener frameListener, int userID) {
@@ -45,6 +46,7 @@ public class CaptureLayer {
                 // 2. Initialize the provider
                 // a cameraprovider allows access to camera
                 ProcessCameraProvider cameraProvider = cameraProviderFuture.get();
+                this.cameraProvider = cameraProvider;
 
                 // 3. Set up ImageAnalysis
                 ImageAnalysis imageAnalysis = new ImageAnalysis.Builder()
@@ -57,16 +59,11 @@ public class CaptureLayer {
                 // main thread mainly for interface
 
                 imageAnalysis.setAnalyzer(executor, image -> {
-                    try {
-                        count += 1;
-                        Bitmap bitmap = image.toBitmap();
-                        frameListener.onCapture(bitmap);
+                    count += 1;
+                    Bitmap bitmap = image.toBitmap();
+                    frameListener.onCapture(bitmap);
+                    image.close();
 
-                    } catch (IOException e) {
-                        Log.e("ImageProcessor", "Save failed", e);
-                    } finally {
-                        image.close();
-                    }
                 });
 
                 // 4. Select camera and bind
@@ -84,4 +81,11 @@ public class CaptureLayer {
             }
         }, ContextCompat.getMainExecutor(context));
     }
+    public void stop() {
+        if (cameraProvider != null) {
+            cameraProvider.unbindAll(); // stops camera
+            cameraProvider = null;
+        }
+    }
+
 }
