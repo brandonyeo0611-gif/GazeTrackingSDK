@@ -60,20 +60,8 @@ public class CaptureLayer {
                     try {
                         count += 1;
                         Bitmap bitmap = image.toBitmap();
-
-                        // should just pass the bitmap to the preprocess layer --> model --> post --> api?
-                        // maybe just return a bytebuffer then the orchestrator layer / API layer will do it
-                        File file = new File(context.getCacheDir(), userID + "frame_" + count + ".jpg");
-
-                        FileOutputStream outputStream = new FileOutputStream(file);
                         frameListener.onCapture(bitmap);
-                        // sends it to orchestrator and orchestrator will save the initial logits
 
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
-                        // turns it into images
-                        // quality attribute 100 is maximum quality
-                        // these lines of code saves the file in the cached repository WITHIN THE DEVICE for access later
-                        outputStream.close();
                     } catch (IOException e) {
                         Log.e("ImageProcessor", "Save failed", e);
                     } finally {

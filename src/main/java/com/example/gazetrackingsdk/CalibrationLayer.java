@@ -1,7 +1,5 @@
 package com.example.gazetrackingsdk;
 
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -10,42 +8,45 @@ import java.util.List;
 // the formula imma use is to find the bias first then the temperature scaling so
 // ( logit + bias ) / scalar
 public class CalibrationLayer {
-    private LinkedList<Integer> y_true_class;
-    private LinkedList<float[]> y_pred_logits;
+    private LinkedList<Integer> yTrueClass;
+    private LinkedList<float[]> yPredLogits;
+    private float[] bias = {0,0,0,0,0,0,0,0,0};
 
 
     CalibrationLayer() {
-        this.y_true_class = new LinkedList<>();
-        this.y_pred_logits = new LinkedList<>();
+        this.yTrueClass = new LinkedList<>();
+        this.yPredLogits = new LinkedList<>();
     }
 
     void add(int y_true, float[] y_pred) {
-        this.y_true_class.add(y_true);
-        this.y_pred_logits.add(y_pred);
+        this.yTrueClass.add(y_true);
+        this.yPredLogits.add(y_pred);
     }
 
-    float f1score(LinkedList<Integer> y_pred_class_after_scaling) {
-        float f1result = 0;
+    double f1Score(LinkedList<Integer> y_pred_class_after_scaling) {
+        double f1result = 0;
         for (int i = 0; i < 9; i++) {
             int tp = 0, fp = 0, fn = 0;
-            for (int j = 0; j < y_true_class.size(); j++) {
-                if (y_pred_class_after_scaling.get(j) == i && y_true_class.get(j) == i) {
+            for (int j = 0; j < yTrueClass.size(); j++) {
+                if (y_pred_class_after_scaling.get(j) == i && yTrueClass.get(j) == i) {
                     tp += 1;
-                } else if (y_pred_class_after_scaling.get(j) == i && y_true_class.get(j) != i) {
+                } else if (y_pred_class_after_scaling.get(j) == i && yTrueClass.get(j) != i) {
                     fp += 1;
-                } else if (y_pred_class_after_scaling.get(j) != i && y_true_class.get(j) == i) {
+                } else if (y_pred_class_after_scaling.get(j) != i && yTrueClass.get(j) == i) {
                     fn += 1;
                 }
             }
-            float precision = (tp + fp == 0) ? 0 : (float) tp / (tp + fp); // guard against 0 division error
-            float recall = (tp + fn == 0) ? 0 : (float) tp / (tp + fn);
-            float f1 = (precision + recall == 0) ? 0 : 2 * (precision * recall) / (precision + recall);
+            double precision = (tp + fp == 0) ? 0 : (double) tp / (tp + fp); // guard against 0 division error
+            double recall = (tp + fn == 0) ? 0 : (double) tp / (tp + fn);
+            double f1 = (precision + recall == 0) ? 0 : 2 * (precision * recall) / (precision + recall);
             f1result += f1;
         }
         return f1result / 9;
     }
+    
+    
 
-    LinkedList<Integer> convert_to_class(LinkedList<float[]> logits) {
+    LinkedList<Integer> convertToClass(LinkedList<float[]> logits) {
         LinkedList<Integer> result = new LinkedList<>();
         for (float[] f : logits) {
             int max = 0;
@@ -59,24 +60,24 @@ public class CalibrationLayer {
         return result;
     }
 
-    float[] coordinate_descent(float[] bias) {
+    float[] coordinateDescent() {
         for (int i = 0; i < 100; i++) {
             // how many iterations u want
             for (int cat = 0; cat < 9; cat++) {
                 float current_class_bias = bias[cat];
 
-                LinkedList<float[]> logits = Postprocessing.applyScaling(bias, 1, this.y_pred_logits);
-                float f1_same = f1score(convert_to_class(logits));
+                LinkedList<float[]> logits = Postprocessing.applyScaling(bias, 1, this.yPredLogits);
+                double f1_same = f1Score(convertToClass(logits));
 
                 bias[cat] = (float) (current_class_bias + 0.1);
-                logits = Postprocessing.applyScaling(bias, 1, this.y_pred_logits);
-                float f1_incr = f1score(convert_to_class(logits));
+                logits = Postprocessing.applyScaling(bias, 1, this.yPredLogits);
+                double f1_incr = f1Score(convertToClass(logits));
 
                 bias[cat] = (float) (current_class_bias - 0.1);
-                logits = Postprocessing.applyScaling(bias, 1, this.y_pred_logits);
-                float f1_decr = f1score(convert_to_class(logits));
+                logits = Postprocessing.applyScaling(bias, 1, this.yPredLogits);
+                double f1_decr = f1Score(convertToClass(logits));
 
-                List<Float> lst = List.of(f1_same,f1_incr,f1_decr);
+                List<Double> lst = List.of(f1_same,f1_incr,f1_decr);
                 int index = lst.indexOf(Collections.max(lst));
 
                 if (index == 0) {
@@ -88,8 +89,37 @@ public class CalibrationLayer {
                 }
             }
         }
+        this.bias = bias;
         return bias;
     }
 
+    double softmaxLoss(LinkedList<float[]> logits) {
+        double loss = 0.0;
+        for (int i = 0; i < yTrueClass.size(); i++ ) {
+            int index = yTrueClass.get(i);
+            float[] softmax = Postprocessing.applySoftmax(logits.get(i));
+            loss += -Math.log(softmax[index]);
+        }
+        return loss;
+    }
 
+    float binarySearch(float low, float high) {
+        for (int i=0 ; i < 200; i++) {
+            float mid = (low + high) / 2;
+            double loss_left = softmaxLoss(Postprocessing.applyScaling(bias, (float) (mid - 0.05), yPredLogits));
+            double loss_right = softmaxLoss(Postprocessing.applyScaling(bias, (float) (mid + 0.05), yPredLogits));
+
+            if (loss_left < loss_right) {
+                high = mid;
+            } else {
+                low = mid;
+            }
+        }
+        return (low + high) / 2;
+    }
+
+    boolean SameSize() {
+        return yTrueClass.size() == yPredLogits.size();
+    }
+    // check if same size first before continuing.
 }

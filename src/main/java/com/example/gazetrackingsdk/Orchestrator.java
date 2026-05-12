@@ -4,14 +4,18 @@ import android.content.Context;
 import android.util.Pair;
 
 import java.io.File;
+import java.io.FileOutputStream;
 import java.nio.ByteBuffer;
 import com.opencsv.CSVWriter;
 
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.LinkedList;
+import java.util.concurrent.atomic.AtomicInteger;
 
 abstract class Orchestrator implements FrameListener {
+    private Context context;
+    private String userID;
 
     private Pair<Double,Double> scalar;
     // to do!
@@ -20,19 +24,25 @@ abstract class Orchestrator implements FrameListener {
     private final PreprocessLayer preprocessLayer;
     private final Postprocessing postprocessingLayerRaw;
     private final Postprocessing postprocessingLayerSmooth;
+    private final CalibrationLayer calibrationLayer;
     private CsvLogger csvLogger;
-    Orchestrator(Context context, String user) {
+    private AtomicInteger count;
+    Orchestrator(Context context, String userID) {
+        this.context = context;
+        this.userID = userID;
+        this.count = new AtomicInteger();
         this.modelInference = new ModelInference(context);
         this.preprocessLayer = new PreprocessLayer();
         this.postprocessingLayerSmooth = new Postprocessing();
         // using the same postprocessing so there is kinda like a memory
         this.postprocessingLayerRaw = new Postprocessing();
-
-        this.csvLogger = new CsvLogger(context, user);
+        this.calibrationLayer = new CalibrationLayer();
+        this.csvLogger = new CsvLogger(context, userID);
     }
     // there probably should be a switch like there is game 1 game 2 and calibration
     // ultimately the API will call differently method signature to tell the thing what task it is?
     //
+
 
     abstract public void onCapture(Bitmap bitmap);
     // essentially each game extends from the orchestrator layer
@@ -40,6 +50,30 @@ abstract class Orchestrator implements FrameListener {
     // what they want to do with the raw image captured
     // so orchestrator layer should just include methods to use
 
+    public void saveCapture(Bitmap bitmap) {
+        try {
+            int frame = count.getAndIncrement();
+            // should just pass the bitmap to the preprocess layer --> model --> post --> api?
+            // maybe just return a bytebuffer then the orchestrator layer / API layer will do it
+            File folder = new File(context.getExternalFilesDir(null), "user" + userID);
+            // save to the external storage for checking
+            // need to ask how it works cause I can't really visualise it
+            if (!folder.exists()) {
+                folder.mkdirs();
+            }
+            File file = new File(folder, "frame_" + frame + ".jpg");
+            FileOutputStream outputStream = new FileOutputStream(file);
+
+            // sends it to orchestrator and orchestrator will save the initial logits
+
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 100, outputStream);
+            // turns it into images
+            // quality attribute 100 is maximum quality
+            // these lines of code saves the file in the cached repository WITHIN THE DEVICE for access later
+            outputStream.close();
+        } catch (java.io.IOException ignored) {
+        }
+    }
     public ByteBuffer getByteBuffer(Bitmap bitmap) {
         return preprocessLayer.convertBitmapToByteBuffer(bitmap);
     }
@@ -109,6 +143,8 @@ abstract class Orchestrator implements FrameListener {
     void stop() {
         csvLogger.close();
     }
+
+
 
 
     // need to flush else the last few frames may be lost
