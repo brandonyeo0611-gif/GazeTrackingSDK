@@ -3,11 +3,15 @@ package com.example.gazetrackingsdk;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.util.Pair;
+import android.content.ContentValues;
+import android.provider.MediaStore;
 
 import androidx.lifecycle.LifecycleOwner;
 
 import org.checkerframework.checker.units.qual.A;
 
+import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -152,6 +156,33 @@ public class GazeTrackingSDK implements FrameListener {
         return res;
     }
     protected void onCapture(Bitmap bitmap) {
+        if (enableFrameSaving) {
+            try {
+                ContentValues contentValues = new ContentValues();
+                contentValues.put(MediaStore.Images.Media.RELATIVE_PATH, "Documents/" + userID);
+                contentValues.put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg");// media type
+                var time = System.currentTimeMillis();
+                if (mode == Mode.CALIBRATION && trueLabel != null) {
+                    contentValues.put(MediaStore.Images.Media.DISPLAY_NAME, trueLabel + "_" + time + ".jpeg");
+                } else {
+                    contentValues.put(MediaStore.Images.Media.DISPLAY_NAME, time + ".jpeg");
+                }
+                var contentResolver = context.getContentResolver();
+                var uniformResourceIdentifier = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues);
+                // uri points to file
+                // url point to website
+
+                if (uniformResourceIdentifier != null) {
+                    OutputStream stream = contentResolver.openOutputStream(uniformResourceIdentifier);
+                    bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
+                    stream.flush();
+                    stream.close();
+                }
+            } catch (Exception e) {
+                System.out.println(e.toString());
+            }
+        }
+
         if (mode == null) {
             throw new IllegalStateException("Please choose a mode");
         }
