@@ -11,18 +11,19 @@ import java.io.IOException;
 public class CsvLogger {
     private CSVWriter csvWriter;
 
-    CsvLogger(Context context, int user) {
+    CsvLogger(Context context, String userID) {
         File directory = new File(context.getFilesDir(), "GazeData");
         // save within local file, to add a method that can just retrieve the csv
         if (!directory.exists()) {
             directory.mkdirs(); // Create a dedicated folder
         }
-        File file = new File(directory, user + "_logits.csv");
+        File file = new File(directory, userID + "_logits.csv");
         // fiile name is userID
         try {
             this.csvWriter = new CSVWriter(new FileWriter(file, true));
             String[] header = {"time", "raw logits", "raw confidence", "raw prediction", "raw Mvote prediction", "smoothen logits", "smoothen confidence", "smoothen prediction", "Smoothen Mvote prediction"};
             // rn there is just the Mvote of the smoothen layer and not the raw one because it will need another instance
+            // I feel like rn its very static e.g. the columns are fixed, but with the builder, I think it's possible to change it depending on the specific build
             if (file.length() == 0) {
                 csvWriter.writeNext(header);
             }

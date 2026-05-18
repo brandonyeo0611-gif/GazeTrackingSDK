@@ -16,10 +16,12 @@ import java.nio.channels.FileChannel;
 public class ModelInference {
     private Context context;
     private Interpreter interpreter;
+    private final String modelAssetName;
     // intepreter is the model
 
-    ModelInference(Context context) {
+    ModelInference(Context context, String modelAssetName) {
         this.context = context;
+        this.modelAssetName = modelAssetName;
         initialiseInterpreter();
         // call the below method to initialise the interpreter
     }

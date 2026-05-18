@@ -16,6 +16,7 @@ public class Postprocessing {
 
     float[] applySmoothing(float[] rawLogits) {
         logits.addLast(rawLogits);
+        // append latest logit to the list then afterwards do the smoothing on it
         if (logits.size() > size) {
             logits.removeFirst();
         }
@@ -33,12 +34,9 @@ public class Postprocessing {
         } else {
             for (int j = 0; j < logits.size(); j++) {
                 for (int i = 0; i < rawLogits.length; i++) {
-                    sol[i] += logits.get(j)[i] + weights[j];
+                    sol[i] += logits.get(j)[i] * weights[j];
                 }
                 // use a weighted sum such that the earlier results are weighted more
-            }
-            for (int i = 0; i < rawLogits.length; i++) {
-                sol[i] /= logits.size();
             }
         }
         return sol;
@@ -57,7 +55,8 @@ public class Postprocessing {
         float[] result = new float[9];
 
         for (int i = 0; i < 9; i++) {
-            result[i] = ( logits[i] + bias[i] ) / scalar;
+            // changed to scale first then add bias
+            result[i] = ( logits[i] / scalar + bias[i] ) ;
         }
         return result;
     }
@@ -69,10 +68,17 @@ public class Postprocessing {
         // pass in the logits and return the vector with the softmax function applied then can select the argmax to get predicted class
         float sumOfExp = 0.0f;
         float[] sol = new float[9];
+        float findMax = logits[0];
+        for (int i = 1 ; i < logits.length; i++) {
+            if (logits[i] > findMax) {
+                findMax = logits[i];
+            }
+        }
 
         for (int i = 0 ; i < logits.length; i++) {
-            sol[i] = (float) Math.exp(logits[i]);
+            sol[i] = (float) Math.exp(logits[i] - findMax);
             sumOfExp += sol[i];
+            // usually subtract the max first
             // make it more efficient; because math.exp is computationally expensive
         }
         for (int i = 0 ; i < logits.length; i++) {
@@ -95,14 +101,16 @@ public class Postprocessing {
         }
         // max contains the confidence and the n contains the predicted class label
         return new Pair<Float,Integer>(max,n);
+
     }
 
-    int majorityVote(int prediction) {
+    int RecencyWeightedVote(int prediction) {
         votes.addLast(prediction);
         if (votes.size() > size) {
             votes.removeFirst();
         }
         float[] sol =  new float[9];
+        // initialise a [0,0,0,0,0,0,0,0,0] matrix
 
         for (int i = 0; i < votes.size();i++ ) {
             int pastPredictions = votes.get(i);
@@ -110,8 +118,8 @@ public class Postprocessing {
             // score them based on past predictions and store it in sol variable
             // sol variable is just a temp array from 1-9 to store the scores
             // qn : this was the first thing that come to mind for me when I was doing majority vote, are there other better ones?
-
         }
+        // I think it's easier to process with numbers instead of like BOTTOM_LEFT from the gaze class but ultimately when we return we would use the gazeclass one
 
         int winner = 0;
         float maxScore = 0.0f;

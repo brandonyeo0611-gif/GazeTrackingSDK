@@ -26,9 +26,9 @@ public class CaptureLayer {
     // would be the app
     private final FrameListener frameListener;
     private ProcessCameraProvider cameraProvider;
-    private final int userID;
+    private final String userID;
 
-    CaptureLayer(Context context, LifecycleOwner lifecycleOwner, FrameListener frameListener, int userID) {
+    CaptureLayer(Context context, LifecycleOwner lifecycleOwner, FrameListener frameListener, String userID) {
         this.context = context;
         this.count = 0;
         this.lifecycleOwner = lifecycleOwner;
@@ -56,14 +56,14 @@ public class CaptureLayer {
 
                 Executor executor = Executors.newSingleThreadExecutor();
                 // dont use main thread use new side thread so parallelism can happen
-                // main thread mainly for interface
+                // main thread mainly for interface ( model )
 
                 imageAnalysis.setAnalyzer(executor, image -> {
-                    count += 1;
                     Bitmap bitmap = image.toBitmap();
                     frameListener.onCapture(bitmap);
                     image.close();
 
+                    // something that I need to think about more deeply is the connection between the capture layer and the sdk
                 });
 
                 // 4. Select camera and bind

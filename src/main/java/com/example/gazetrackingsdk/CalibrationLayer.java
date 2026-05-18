@@ -60,21 +60,21 @@ public class CalibrationLayer {
         return result;
     }
 
-    float[] coordinateDescent() {
+    float[] coordinateDescent(float scalar) {
         for (int i = 0; i < 100; i++) {
             // how many iterations u want
             for (int cat = 0; cat < 9; cat++) {
                 float current_class_bias = bias[cat];
 
-                LinkedList<float[]> logits = Postprocessing.applyScaling(bias, 1, this.yPredLogits);
+                LinkedList<float[]> logits = Postprocessing.applyScaling(bias, scalar, this.yPredLogits);
                 double f1_same = f1Score(convertToClass(logits));
 
                 bias[cat] = (float) (current_class_bias + 0.1);
-                logits = Postprocessing.applyScaling(bias, 1, this.yPredLogits);
+                logits = Postprocessing.applyScaling(bias, scalar, this.yPredLogits);
                 double f1_incr = f1Score(convertToClass(logits));
 
                 bias[cat] = (float) (current_class_bias - 0.1);
-                logits = Postprocessing.applyScaling(bias, 1, this.yPredLogits);
+                logits = Postprocessing.applyScaling(bias, scalar, this.yPredLogits);
                 double f1_decr = f1Score(convertToClass(logits));
 
                 List<Double> lst = List.of(f1_same,f1_incr,f1_decr);
@@ -100,7 +100,7 @@ public class CalibrationLayer {
             float[] softmax = Postprocessing.applySoftmax(logits.get(i));
             loss += -Math.log(softmax[index]);
         }
-        return loss;
+        return loss / yTrueClass.size();
     }
 
     float binarySearch(float low, float high) {

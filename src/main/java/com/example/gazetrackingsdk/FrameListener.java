@@ -5,5 +5,5 @@ import android.graphics.Bitmap;
 import java.nio.ByteBuffer;
 
 public interface FrameListener {
-    public void onCapture(Bitmap bitmap);
+    protected void onCapture(Bitmap bitmap);
 }
