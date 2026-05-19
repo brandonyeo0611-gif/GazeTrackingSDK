@@ -8,12 +8,8 @@ import android.provider.MediaStore;
 
 import androidx.lifecycle.LifecycleOwner;
 
-import org.checkerframework.checker.units.qual.A;
-
-import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
-import java.util.concurrent.atomic.AtomicInteger;
 
 enum Mode {
     CALIBRATION,
@@ -35,22 +31,22 @@ public class GazeTrackingSDK implements FrameListener {
 
     // pipeline
     private Mode mode;
-    private Integer trueLabel;
+    private GazeClass trueLabel;
+    // suggested to change to GazeClass because else there is leak
     private CaptureLayer captureLayer;
     private ModelInference modelInference;
 
     private PreprocessLayer preprocessLayer;
-    private Postprocessing postprocessingLayerRaw;
-    private Postprocessing postprocessingLayerSmooth;
+
+    private PostprocessingLayer postprocessingLayer;
     private CalibrationLayer calibrationLayer;
     private PredictionListener predictionListener;
 
     private CsvLogger csvLogger;
 
     // specific to user
-    private AtomicInteger count;
     private String userID;
-    private Pair<Float,float[]> calibrations;
+    private Pair<Float,float[]> calibrations = null;
     private GazeTrackingSDK(Builder builder) {
         // android dependency
         this.context = builder.context;
@@ -69,13 +65,12 @@ public class GazeTrackingSDK implements FrameListener {
         this.preprocessLayer = new PreprocessLayer();
         this.modelInference = new ModelInference(context, modelAssetName);
         this.calibrationLayer = new CalibrationLayer();
-        this.postprocessingLayerRaw = new Postprocessing();
-        this.postprocessingLayerSmooth = new Postprocessing();
+        this.postprocessingLayer = new PostprocessingLayer();
         this.csvLogger = new CsvLogger(context, builder.userID);
 
         // user-specific
         this.userID = builder.userID;
-        this.count = new AtomicInteger();
+
 
     }
 
@@ -131,6 +126,12 @@ public class GazeTrackingSDK implements FrameListener {
         }
 
         public GazeTrackingSDK build() {
+            if (modelAssetName == null) {
+                throw new IllegalStateException(
+                        "Model asset name required"
+                );
+            }
+
             return new GazeTrackingSDK(this);
         }
     }
@@ -138,15 +139,18 @@ public class GazeTrackingSDK implements FrameListener {
         this.predictionListener = predictionListener;
     }
     public void setTrueLabel(GazeClass gazeClass) {
-        this.trueLabel = gazeClass.ordinal();
+        if (!enableCalibration) {
+            throw new IllegalStateException("Calibration not enabled");
+        }
+        this.trueLabel = gazeClass;
     }
 
     // start capturing
-    public void start() {
+    private void start() {
         this.captureLayer.captureImage();
     }
 
-    public void stop() {
+    private void stop() {
         this.captureLayer.stop();
     }
 
@@ -191,15 +195,73 @@ public class GazeTrackingSDK implements FrameListener {
                 if (trueLabel == null) {
                     throw new NullPointerException("Please set true label first");
                 } else {
-                    float[] pred = getRawLogitsInference(bitmap);
-                    this.calibrationLayer.add(trueLabel, pred);
+                    float[] logits = getRawLogitsInference(bitmap);
+                    this.calibrationLayer.add(trueLabel.ordinal(), logits);
                 }
                 break;
 
             case PREDICTION:
-                // to-do
-                break;
+                float[] logitRaw; GazeClass rawClass; float confRaw; float[] logitSmooth = null; GazeClass smoothClass = null; Float confSmooth = null; GazeClass mVote = null;
+                logitRaw = getRawLogitsInference(bitmap);
+
+                if (enableCalibration && calibrations != null) {
+                    logitRaw = PostprocessingLayer.applyScaling(calibrations.second, calibrations.first, logitRaw);
+                }
+
+                Pair<Float, Integer> confnPredRaw = PostprocessingLayer.ConfnPred(logitRaw);
+                rawClass = GazeClass.values()[confnPredRaw.second];
+                confRaw = confnPredRaw.first;
+                if (enableSmoothing) {
+                    logitSmooth = postprocessingLayer.applySmoothing(logitRaw);
+                    Pair<Float, Integer> confnPredSmooth = PostprocessingLayer.ConfnPred(logitSmooth);
+                    smoothClass = GazeClass.values()[confnPredSmooth.second];
+                    confSmooth = confnPredSmooth.first;
+                }
+
+
+                // note that if smoothing is enabled, only apply mvote on smoothened one
+                if (enableMajorityVote) {
+                    if (enableSmoothing) {
+                        int index = postprocessingLayer.applyRecencyWeightedVote(smoothClass.ordinal());
+                        mVote = GazeClass.values()[index];
+                    } else {
+                        int index = postprocessingLayer.applyRecencyWeightedVote(rawClass.ordinal());
+                        mVote = GazeClass.values()[index];
+                    }
+                }
+
+                GazePrediction p = new GazePrediction(logitRaw, rawClass, confRaw,logitSmooth, smoothClass, confSmooth,  mVote);
+
+                if (predictionListener != null) {
+                    predictionListener.onPrediction(p);
+                }
+
+                if (enableCsvLogging) {
+                    csvLogger.onPrediction(p);
+                }
         }
+    }
+
+    public Pair<GazeClass, Float> predict(Bitmap bitmap) {
+        float[] logitRaw = getRawLogitsInference(bitmap);
+
+        if (enableCalibration && calibrations != null) {
+            logitRaw = PostprocessingLayer.applyScaling(calibrations.second, calibrations.first, logitRaw);
+        }
+
+        Pair<Float, Integer> confnPredRaw = PostprocessingLayer.ConfnPred(logitRaw);
+        GazeClass rawClass = GazeClass.values()[confnPredRaw.second];
+        return new Pair<>(rawClass, confnPredRaw.first);
+    }
+
+    public void startInference() {
+        this.mode = Mode.PREDICTION;
+        start();
+    }
+
+    public void stopInference() {
+        this.mode = null;
+        stop();
     }
 
     public void startCalibration() {
@@ -222,7 +284,6 @@ public class GazeTrackingSDK implements FrameListener {
         if (!enableCalibration) {
             throw new IllegalStateException("Calibration not enabled");
         }
-
         if (calibrations == null) {
             float scalar = calibrationLayer.binarySearch(-10, 10);
             float[] bias = calibrationLayer.coordinateDescent(scalar);

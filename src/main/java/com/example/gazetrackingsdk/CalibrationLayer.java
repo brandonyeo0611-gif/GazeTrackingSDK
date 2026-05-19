@@ -66,15 +66,15 @@ public class CalibrationLayer {
             for (int cat = 0; cat < 9; cat++) {
                 float current_class_bias = bias[cat];
 
-                LinkedList<float[]> logits = Postprocessing.applyScaling(bias, scalar, this.yPredLogits);
+                LinkedList<float[]> logits = PostprocessingLayer.applyScaling(bias, scalar, this.yPredLogits);
                 double f1_same = f1Score(convertToClass(logits));
 
                 bias[cat] = (float) (current_class_bias + 0.1);
-                logits = Postprocessing.applyScaling(bias, scalar, this.yPredLogits);
+                logits = PostprocessingLayer.applyScaling(bias, scalar, this.yPredLogits);
                 double f1_incr = f1Score(convertToClass(logits));
 
                 bias[cat] = (float) (current_class_bias - 0.1);
-                logits = Postprocessing.applyScaling(bias, scalar, this.yPredLogits);
+                logits = PostprocessingLayer.applyScaling(bias, scalar, this.yPredLogits);
                 double f1_decr = f1Score(convertToClass(logits));
 
                 List<Double> lst = List.of(f1_same,f1_incr,f1_decr);
@@ -97,7 +97,7 @@ public class CalibrationLayer {
         double loss = 0.0;
         for (int i = 0; i < yTrueClass.size(); i++ ) {
             int index = yTrueClass.get(i);
-            float[] softmax = Postprocessing.applySoftmax(logits.get(i));
+            float[] softmax = PostprocessingLayer.applySoftmax(logits.get(i));
             loss += -Math.log(softmax[index]);
         }
         return loss / yTrueClass.size();
@@ -106,8 +106,8 @@ public class CalibrationLayer {
     float binarySearch(float low, float high) {
         for (int i=0 ; i < 200; i++) {
             float mid = (low + high) / 2;
-            double loss_left = softmaxLoss(Postprocessing.applyScaling(bias, (float) (mid - 0.05), yPredLogits));
-            double loss_right = softmaxLoss(Postprocessing.applyScaling(bias, (float) (mid + 0.05), yPredLogits));
+            double loss_left = softmaxLoss(PostprocessingLayer.applyScaling(bias, (float) (mid - 0.05), yPredLogits));
+            double loss_right = softmaxLoss(PostprocessingLayer.applyScaling(bias, (float) (mid + 0.05), yPredLogits));
 
             if (loss_left < loss_right) {
                 high = mid;

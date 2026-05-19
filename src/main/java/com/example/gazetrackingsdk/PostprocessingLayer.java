@@ -4,12 +4,12 @@ import android.util.Pair;
 
 import java.util.LinkedList;
 
-public class Postprocessing {
+public class PostprocessingLayer {
     private final LinkedList<float[]> logits;
     private static final int size = 5;
     private final LinkedList<Integer> votes;
     private static final float[] weights = {0.05f, 0.1f, 0.15f, 0.3f, 0.4f};
-    Postprocessing() {
+    PostprocessingLayer() {
         this.logits = new LinkedList<>();
         this.votes = new LinkedList<>();
     }
@@ -90,7 +90,7 @@ public class Postprocessing {
 
 
     static Pair<Float,Integer> ConfnPred(float[] rawLogits) {
-        float[] result = Postprocessing.applySoftmax(rawLogits);
+        float[] result = PostprocessingLayer.applySoftmax(rawLogits);
         float max = result[0];
         int n = 0;
         for (int i = 1; i < result.length; i ++) {
@@ -104,7 +104,7 @@ public class Postprocessing {
 
     }
 
-    int RecencyWeightedVote(int prediction) {
+    int applyRecencyWeightedVote(int prediction) {
         votes.addLast(prediction);
         if (votes.size() > size) {
             votes.removeFirst();
