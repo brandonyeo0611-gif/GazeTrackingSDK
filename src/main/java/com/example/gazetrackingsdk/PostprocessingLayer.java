@@ -2,23 +2,24 @@ package com.example.gazetrackingsdk;
 
 import android.util.Pair;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 
 public class PostprocessingLayer {
-    private final LinkedList<float[]> logits;
+    private final ArrayList<float[]> logits;
     private static final int size = 5;
-    private final LinkedList<Integer> votes;
+    private final ArrayList<Integer> votes;
     private static final float[] weights = {0.05f, 0.1f, 0.15f, 0.3f, 0.4f};
     PostprocessingLayer() {
-        this.logits = new LinkedList<>();
-        this.votes = new LinkedList<>();
+        this.logits = new ArrayList<>();
+        this.votes = new ArrayList<>();
     }
 
     float[] applySmoothing(float[] rawLogits) {
-        logits.addLast(rawLogits);
+        logits.add(rawLogits);
         // append latest logit to the list then afterwards do the smoothing on it
         if (logits.size() > size) {
-            logits.removeFirst();
+            logits.remove(0);
         }
         float[] sol = new float[9];
         if (logits.size() < size) {
@@ -43,8 +44,8 @@ public class PostprocessingLayer {
 
     }
 
-    static LinkedList<float[]> applyScaling(float[] bias, float scalar, LinkedList<float[]> logits) {
-        LinkedList<float[]> result = new LinkedList<>();
+    static ArrayList<float[]> applyScaling(float[] bias, float scalar, ArrayList<float[]> logits) {
+        ArrayList<float[]> result = new ArrayList<>();
         for (float[] f : logits) {
             result.add(applyScaling(bias,scalar, f));
         }
@@ -105,9 +106,9 @@ public class PostprocessingLayer {
     }
 
     int applyRecencyWeightedVote(int prediction) {
-        votes.addLast(prediction);
+        votes.add(prediction);
         if (votes.size() > size) {
-            votes.removeFirst();
+            votes.remove(0);
         }
         float[] sol =  new float[9];
         // initialise a [0,0,0,0,0,0,0,0,0] matrix

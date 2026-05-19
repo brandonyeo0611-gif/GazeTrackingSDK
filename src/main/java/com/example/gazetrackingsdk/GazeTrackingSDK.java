@@ -253,7 +253,9 @@ public class GazeTrackingSDK implements FrameListener {
         GazeClass rawClass = GazeClass.values()[confnPredRaw.second];
         return new Pair<>(rawClass, confnPredRaw.first);
     }
-
+    // public void setMode(Mode mode) {
+    //    this.mode = mode;
+    //} would something like this be better? so the user set the mdoe first then afterthat just run start()
     public void startInference() {
         this.mode = Mode.PREDICTION;
         start();

@@ -1,5 +1,8 @@
 package com.example.gazetrackingsdk;
 
+import org.checkerframework.checker.units.qual.A;
+
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -8,14 +11,15 @@ import java.util.List;
 // the formula imma use is to find the bias first then the temperature scaling so
 // ( logit + bias ) / scalar
 public class CalibrationLayer {
-    private LinkedList<Integer> yTrueClass;
-    private LinkedList<float[]> yPredLogits;
+    private ArrayList<Integer> yTrueClass;
+    // use array list if there is heavy indexing
+    private ArrayList<float[]> yPredLogits;
     private float[] bias = {0,0,0,0,0,0,0,0,0};
 
 
     CalibrationLayer() {
-        this.yTrueClass = new LinkedList<>();
-        this.yPredLogits = new LinkedList<>();
+        this.yTrueClass = new ArrayList<>();
+        this.yPredLogits = new ArrayList<>();
     }
 
     void add(int y_true, float[] y_pred) {
@@ -23,7 +27,7 @@ public class CalibrationLayer {
         this.yPredLogits.add(y_pred);
     }
 
-    double f1Score(LinkedList<Integer> y_pred_class_after_scaling) {
+    double f1Score(ArrayList<Integer> y_pred_class_after_scaling) {
         double f1result = 0;
         for (int i = 0; i < 9; i++) {
             int tp = 0, fp = 0, fn = 0;
@@ -46,8 +50,8 @@ public class CalibrationLayer {
     
     
 
-    LinkedList<Integer> convertToClass(LinkedList<float[]> logits) {
-        LinkedList<Integer> result = new LinkedList<>();
+    ArrayList<Integer> convertToClass(ArrayList<float[]> logits) {
+        ArrayList<Integer> result = new ArrayList<>();
         for (float[] f : logits) {
             int max = 0;
             for (int i = 1; i < f.length; i++) {
@@ -66,7 +70,7 @@ public class CalibrationLayer {
             for (int cat = 0; cat < 9; cat++) {
                 float current_class_bias = bias[cat];
 
-                LinkedList<float[]> logits = PostprocessingLayer.applyScaling(bias, scalar, this.yPredLogits);
+                ArrayList<float[]> logits = PostprocessingLayer.applyScaling(bias, scalar, this.yPredLogits);
                 double f1_same = f1Score(convertToClass(logits));
 
                 bias[cat] = (float) (current_class_bias + 0.1);
@@ -93,12 +97,13 @@ public class CalibrationLayer {
         return bias;
     }
 
-    double softmaxLoss(LinkedList<float[]> logits) {
+    double softmaxLoss(ArrayList<float[]> logits) {
         double loss = 0.0;
         for (int i = 0; i < yTrueClass.size(); i++ ) {
             int index = yTrueClass.get(i);
             float[] softmax = PostprocessingLayer.applySoftmax(logits.get(i));
-            loss += -Math.log(softmax[index]);
+            loss += -Math.log(Math.max(softmax[index], 1e-12));
+            // guard against 0 error
         }
         return loss / yTrueClass.size();
     }
@@ -118,7 +123,7 @@ public class CalibrationLayer {
         return (low + high) / 2;
     }
 
-    boolean SameSize() {
+    boolean sameSize() {
         return yTrueClass.size() == yPredLogits.size();
     }
     // check if same size first before continuing.
