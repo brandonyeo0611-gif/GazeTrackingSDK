@@ -195,8 +195,11 @@ public class GazeTrackingSDK implements FrameListener {
                 if (trueLabel == null) {
                     throw new NullPointerException("Please set true label first");
                 } else {
+                    // calibrate base on raw logits
                     float[] logits = getRawLogitsInference(bitmap);
                     this.calibrationLayer.add(trueLabel.ordinal(), logits);
+                    // should I feed the predicted into the predictive listener here too?
+                    // would that mean that need go through the checks of enable smoothing ... like code below?
                 }
                 break;
 

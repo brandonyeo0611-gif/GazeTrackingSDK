@@ -1,13 +1,15 @@
 package com.example.gazetrackingsdk;
 
+import java.util.List;
+
 public class GazePrediction {
-    private float[] logitRaw;
-    private GazeClass rawClass;
-    private float confidenceRaw;
-    private float[] logitSmooth;
-    private GazeClass smoothClass;
-    private float confidenceSmooth;
-    private GazeClass MVote;
+    protected float[] logitRaw;
+    protected GazeClass rawClass;
+    protected float confidenceRaw;
+    protected float[] logitSmooth;
+    protected GazeClass smoothClass;
+    protected float confidenceSmooth;
+    protected GazeClass MVote;
 
     public GazePrediction(float[] logitRaw, GazeClass rawClass, float confidenceRaw, float[] logitSmooth, GazeClass smoothClass, float confidenceSmooth, GazeClass mVote) {
         this.logitRaw = logitRaw;
@@ -43,5 +45,9 @@ public class GazePrediction {
 
     public GazeClass getMVote() {
         return MVote;
+    }
+
+    protected List<Object> getAll() {
+        return List.<Object>of(logitRaw, rawClass, confidenceRaw, logitSmooth, smoothClass, confidenceSmooth, MVote);
     }
 }
