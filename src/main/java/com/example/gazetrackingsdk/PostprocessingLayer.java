@@ -79,7 +79,7 @@ public class PostprocessingLayer {
         for (int i = 0 ; i < logits.length; i++) {
             sol[i] = (float) Math.exp(logits[i] - findMax);
             sumOfExp += sol[i];
-            // usually subtract the max first
+            // usually subtract the max first for stability
             // make it more efficient; because math.exp is computationally expensive
         }
         for (int i = 0 ; i < logits.length; i++) {

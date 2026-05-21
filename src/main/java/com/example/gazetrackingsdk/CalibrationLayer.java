@@ -22,11 +22,13 @@ public class CalibrationLayer {
         this.yPredLogits = new ArrayList<>();
     }
 
+    // addes the true label and the logits of the predicted into private list
     void add(int y_true, float[] y_pred) {
         this.yTrueClass.add(y_true);
         this.yPredLogits.add(y_pred);
     }
 
+    // calculate the f1 score
     double f1Score(ArrayList<Integer> y_pred_class_after_scaling) {
         double f1result = 0;
         for (int i = 0; i < 9; i++) {
@@ -47,8 +49,6 @@ public class CalibrationLayer {
         }
         return f1result / 9;
     }
-    
-    
 
     ArrayList<Integer> convertToClass(ArrayList<float[]> logits) {
         ArrayList<Integer> result = new ArrayList<>();
@@ -70,13 +70,16 @@ public class CalibrationLayer {
             for (int cat = 0; cat < 9; cat++) {
                 float current_class_bias = bias[cat];
 
+                // same bias
                 ArrayList<float[]> logits = PostprocessingLayer.applyScaling(bias, scalar, this.yPredLogits);
                 double f1_same = f1Score(convertToClass(logits));
 
+                // bias with increment
                 bias[cat] = (float) (current_class_bias + 0.1);
                 logits = PostprocessingLayer.applyScaling(bias, scalar, this.yPredLogits);
                 double f1_incr = f1Score(convertToClass(logits));
 
+                // bias with decrement
                 bias[cat] = (float) (current_class_bias - 0.1);
                 logits = PostprocessingLayer.applyScaling(bias, scalar, this.yPredLogits);
                 double f1_decr = f1Score(convertToClass(logits));

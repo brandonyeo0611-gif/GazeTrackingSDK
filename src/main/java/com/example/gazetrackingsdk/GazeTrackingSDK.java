@@ -33,19 +33,19 @@ public class GazeTrackingSDK implements FrameListener {
     private Mode mode;
     private GazeClass trueLabel;
     // suggested to change to GazeClass because else there is leak
-    private CaptureLayer captureLayer;
-    private ModelInference modelInference;
+    private final CaptureLayer captureLayer;
+    private final ModelInference modelInference;
 
-    private PreprocessLayer preprocessLayer;
+    private final PreprocessLayer preprocessLayer;
 
-    private PostprocessingLayer postprocessingLayer;
+    private final PostprocessingLayer postprocessingLayer;
     private CalibrationLayer calibrationLayer;
     private PredictionListener predictionListener;
 
-    private CsvLogger csvLogger;
+    private final CsvLogger csvLogger;
 
     // specific to user
-    private String userID;
+    private final String userID;
     private Pair<Float,float[]> calibrations = null;
     private GazeTrackingSDK(Builder builder) {
         // android dependency
@@ -78,15 +78,15 @@ public class GazeTrackingSDK implements FrameListener {
 
 
     public static class Builder {
-        private Context context;
-        private LifecycleOwner lifecycleOwner;
+        private final Context context;
+        private final LifecycleOwner lifecycleOwner;
         private String modelAssetName;
         private boolean enableCalibration = false;
         private boolean enableSmoothing = false;
         private boolean enableMajorityVote = false;
         private boolean enableCsvLogging = false;
         private boolean enableFrameSaving = false;
-        private String userID;
+        private final String userID;
 
         // nested class is not implicitly public
         public Builder(Context context, LifecycleOwner lifecycleOwner, String userID) {
@@ -178,6 +178,7 @@ public class GazeTrackingSDK implements FrameListener {
 
                 if (uniformResourceIdentifier != null) {
                     OutputStream stream = contentResolver.openOutputStream(uniformResourceIdentifier);
+                    assert stream != null;
                     bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream);
                     stream.flush();
                     stream.close();

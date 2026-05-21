@@ -52,6 +52,23 @@ public class PreprocessLayer {
                 int val = intValues[pixel];
                 pixel = pixel + 1;
 
+                //val = 0x00RRGGBB
+                //       ^^^^^^^^
+                //       00 = unused (alpha sometimes here)
+                //         RR = Red   (bits 16-23)
+                //           GG = Green (bits 8-15)
+                //             BB = Blue  (bits 0-7)
+                // Binary: 00000000 11111111 10001100 00000000
+                //                 ^^^^^^^^ ^^^^^^^^ ^^^^^^^^
+                //                 Red=255  Green=140 Blue=0
+                // 00000000 11111111 10001100 00000000   // original
+                //>> 16
+                //00000000 00000000 00000000 11111111   // shift right 16 bits
+                //& 0xFF (= 00000000 00000000 00000000 11111111)
+                //00000000 00000000 00000000 11111111   // = 255 ✅
+
+                // >> n right shift
+                // 0xFF -->  zeros out everything except the lowest 8 bits
                 // Extract RGB channels
                 int r = (val >> 16) & 0xFF;
                 int g = (val >> 8) & 0xFF;
@@ -67,6 +84,8 @@ public class PreprocessLayer {
         return byteBuffer;
     }
 
+    // bitmap its like 00000000 11111111 10001100 00000000 for one pixel
+    // bytebuffer its like R=[0,1], G=[0,1], B=[0,1]
     ByteBuffer convertBitmapToByteBuffer(Bitmap img) {
         Bitmap resizedImage = Bitmap.createScaledBitmap(
                 img,
