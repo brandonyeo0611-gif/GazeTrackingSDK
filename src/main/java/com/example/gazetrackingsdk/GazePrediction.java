@@ -1,5 +1,6 @@
 package com.example.gazetrackingsdk;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class GazePrediction {
@@ -47,7 +48,7 @@ public class GazePrediction {
         return MVote;
     }
 
-    protected List<Object> getAll() {
-        return List.<Object>of(logitRaw, rawClass, confidenceRaw, logitSmooth, smoothClass, confidenceSmooth, MVote);
+    protected ArrayList<Object> getAll() {
+        return new ArrayList<Object>(List.<Object>of(logitRaw, rawClass, confidenceRaw, logitSmooth, smoothClass, confidenceSmooth, MVote));
     }
 }

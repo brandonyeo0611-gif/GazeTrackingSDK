@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
-public class CsvLogger implements PredictionListener {
+public class CsvLogger {
     private CSVWriter csvWriter;
 
 
@@ -60,16 +60,13 @@ public class CsvLogger implements PredictionListener {
                 "",
                 ""
         ));
-
-
-
         base.add(trueLabel.name());
         csvWriter.writeNext(base.toArray(new String[0]));
     }
     public void onPrediction(GazePrediction p) {
         long time = System.currentTimeMillis();
         List<String> base = new ArrayList<String>(List.<String>of(String.valueOf(time)));
-        List<Object> content = p.getAll();
+        ArrayList<Object> content = p.getAll();
         for (Object o : content) {
             if (o == null) {
                 base.add("");
@@ -89,9 +86,6 @@ public class CsvLogger implements PredictionListener {
         csvWriter.writeNext(base.toArray(new String[0]));
     }
 
-    public void onError() {
-        // leave blank for now
-    }
     static String saveLogits(float[] logit) {
         StringBuilder logitsString = new StringBuilder();
         for (int i = 0; i < logit.length; i++) {
@@ -103,9 +97,6 @@ public class CsvLogger implements PredictionListener {
         return logitsString.toString();
     }
 
-    void writeNext(String[] s) {
-        csvWriter.writeNext(s);
-    }
 
     // when the game is done then call this
     // it saves and close the csv

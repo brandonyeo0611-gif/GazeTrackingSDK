@@ -46,7 +46,7 @@ public class ModelInference {
     private void initialiseInterpreter() {
         AssetManager assetManager = context.getAssets();
         try {
-            MappedByteBuffer model = loadModelFile(assetManager, "finaloutputmatrix.tflite"); // type that is fed into tensorlite
+            MappedByteBuffer model = loadModelFile(assetManager, modelAssetName); // type that is fed into tensorlite
             Interpreter interpreter = new Interpreter(model);
 // Finish interpreter initialization
             this.interpreter = interpreter;

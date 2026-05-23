@@ -36,11 +36,12 @@ public class CaptureLayer {
         this.userID = userID;
     }
 
-    public void captureImage() {
+    public void start() {
         ListenableFuture<ProcessCameraProvider> cameraProviderFuture =
                 ProcessCameraProvider.getInstance(context);
         // retrieve camera provider from the context
 
+        // addListener is to
         cameraProviderFuture.addListener(() -> {
             try {
                 // 2. Initialize the provider
@@ -58,6 +59,7 @@ public class CaptureLayer {
                 // dont use main thread use new side thread so parallelism can happen
                 // main thread mainly for interface ( model )
 
+                // takse in an executor and what to do with the image
                 imageAnalysis.setAnalyzer(executor, image -> {
                     Bitmap bitmap = image.toBitmap();
                     frameListener.onCapture(bitmap);

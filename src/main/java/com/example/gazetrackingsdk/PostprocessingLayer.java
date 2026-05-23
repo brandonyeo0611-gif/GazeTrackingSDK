@@ -41,7 +41,6 @@ public class PostprocessingLayer {
             }
         }
         return sol;
-
     }
 
     static ArrayList<float[]> applyScaling(float[] bias, float scalar, ArrayList<float[]> logits) {

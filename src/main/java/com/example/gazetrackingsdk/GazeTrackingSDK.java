@@ -147,7 +147,7 @@ public class GazeTrackingSDK implements FrameListener {
 
     // start capturing
     private void start() {
-        this.captureLayer.captureImage();
+        this.captureLayer.start();
     }
 
     private void stop() {
@@ -159,7 +159,7 @@ public class GazeTrackingSDK implements FrameListener {
         float[] res = this.modelInference.getInference(byteBuffer);
         return res;
     }
-    protected void onCapture(Bitmap bitmap) {
+    public void onCapture(Bitmap bitmap) {
         if (enableFrameSaving) {
             try {
                 ContentValues contentValues = new ContentValues();
@@ -201,6 +201,10 @@ public class GazeTrackingSDK implements FrameListener {
                     this.calibrationLayer.add(trueLabel.ordinal(), logits);
                     // should I feed the predicted into the predictive listener here too?
                     // would that mean that need go through the checks of enable smoothing ... like code below?
+
+                    if (enableCsvLogging) {
+                        csvLogger.onPrediction(logits, trueLabel);
+                    }
                 }
                 break;
 
