@@ -37,7 +37,7 @@ public class PostprocessingLayer {
                 for (int i = 0; i < rawLogits.length; i++) {
                     sol[i] += logits.get(j)[i] * weights[j];
                 }
-                // use a weighted sum such that the earlier results are weighted more
+                // use a weighted sum such that the more recent results are weighted more
             }
         }
         return sol;
@@ -112,7 +112,11 @@ public class PostprocessingLayer {
         float[] sol =  new float[9];
         // initialise a [0,0,0,0,0,0,0,0,0] matrix
 
+        // if the total votes < 5, need to normalise afterwards
+        float norm = 0f;
+
         for (int i = 0; i < votes.size();i++ ) {
+            norm += weights[i];
             int pastPredictions = votes.get(i);
             sol[pastPredictions] += 1 * weights[i];
             // score them based on past predictions and store it in sol variable
@@ -121,6 +125,10 @@ public class PostprocessingLayer {
         }
         // I think it's easier to process with numbers instead of like BOTTOM_LEFT from the gaze class but ultimately when we return we would use the gazeclass one
 
+        // normalising --> do this because if less than 5
+        for (int i = 0; i < sol.length; i++ ) {
+            sol[i] /= norm;
+        }
         int winner = 0;
         float maxScore = 0.0f;
         for (int i = 0; i < sol.length; i++) {

@@ -8,6 +8,7 @@ import android.provider.MediaStore;
 
 import androidx.lifecycle.LifecycleOwner;
 
+import java.io.File;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.Optional;
@@ -43,11 +44,13 @@ public class GazeTrackingSDK implements FrameListener {
     private CalibrationLayer calibrationLayer;
     private PredictionListener predictionListener;
 
-    private final CsvLogger csvLogger;
+    private CsvLogger csvLogger;
 
     // specific to user
     private final String userID;
     private Pair<Float,float[]> calibrations = null;
+    private File calibrationFile;
+    private File inferenceFile;
     private GazeTrackingSDK(Builder builder) {
         // android dependency
         this.context = builder.context;
@@ -67,7 +70,6 @@ public class GazeTrackingSDK implements FrameListener {
         this.modelInference = new ModelInference(context, modelAssetName);
         this.calibrationLayer = new CalibrationLayer();
         this.postprocessingLayer = new PostprocessingLayer();
-        this.csvLogger = new CsvLogger(context, builder.userID);
 
         // user-specific
         this.userID = builder.userID;
@@ -191,7 +193,7 @@ public class GazeTrackingSDK implements FrameListener {
         }
 
         if (mode == null) {
-            throw new IllegalStateException("Please choose a mode");
+            return;
         }
         switch (mode) {
             case CALIBRATION:
@@ -268,12 +270,19 @@ public class GazeTrackingSDK implements FrameListener {
     //} would something like this be better? so the user set the mdoe first then afterthat just run start()
     public void startInference() {
         this.mode = Mode.PREDICTION;
+        if (enableCsvLogging) {
+            this.csvLogger = new CsvLogger(context, userID, mode);
+        }
         start();
     }
 
     public void stopInference() {
-        this.mode = null;
         stop();
+        this.mode = null;
+        if (enableCsvLogging) {
+            csvLogger.close();
+            this.inferenceFile = csvLogger.getFile();
+        }
     }
 
     public void startCalibration() {
@@ -281,6 +290,9 @@ public class GazeTrackingSDK implements FrameListener {
             throw new IllegalStateException("Calibration not enabled");
         }
         this.mode = Mode.CALIBRATION;
+        if (enableCsvLogging) {
+            this.csvLogger = new CsvLogger(context, userID, mode);
+        }
         start();
     }
 
@@ -288,8 +300,12 @@ public class GazeTrackingSDK implements FrameListener {
         if (!enableCalibration) {
             throw new IllegalStateException("Calibration not enabled");
         }
-        this.mode = null;
         stop();
+        this.mode = null;
+        if (enableCsvLogging) {
+            csvLogger.close();
+            this.calibrationFile = csvLogger.getFile();
+        }
     }
 
     public Pair<Float, float[]> getCalibrationResults() {
@@ -297,7 +313,7 @@ public class GazeTrackingSDK implements FrameListener {
             throw new IllegalStateException("Calibration not enabled");
         }
         if (calibrations == null) {
-            float scalar = calibrationLayer.binarySearch(-10, 10);
+            float scalar = calibrationLayer.binarySearch(0.1F, 10); // note that low shouldn't be negative else it flips the sign for ALL logits, not 0 to prevent divide by zero
             float[] bias = calibrationLayer.coordinateDescent(scalar);
             this.calibrations = new Pair<>(scalar, bias);
             return calibrations;
@@ -312,5 +328,13 @@ public class GazeTrackingSDK implements FrameListener {
         }
         this.calibrations = null;
         this.calibrationLayer = new CalibrationLayer();
+    }
+
+    public File getCalibrationFile() {
+        return calibrationFile;
+    }
+
+    public File getInferenceFile() {
+        return inferenceFile;
     }
 }

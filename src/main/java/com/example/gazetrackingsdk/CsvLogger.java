@@ -16,16 +16,27 @@ import java.util.Optional;
 
 public class CsvLogger {
     private CSVWriter csvWriter;
+    private File file;
 
-
-    CsvLogger(Context context, String userID) {
+    CsvLogger(Context context, String userID, Mode mode) {
 
         File directory = new File(context.getFilesDir(), "GazeData");
         // save within local file, to add   method that can just retrieve the csv
         if (!directory.exists()) {
             directory.mkdirs(); // Create a dedicated folder
         }
-        File file = new File(directory, userID + "_logits.csv");
+        switch (mode) {
+            case CALIBRATION : {
+                this.file = new File(directory, userID + "_calibration_logits.csv");
+                break;
+            }
+            case PREDICTION : {
+                this.file = new File(directory, userID + "_inference_logits.csv");
+                break;
+            }
+        };
+
+
         String[] defaultString = new String[] {"Time",
                 "Raw_logits",
                 "Raw_predication",
@@ -36,6 +47,7 @@ public class CsvLogger {
                 "Majorite_vote",
                 "True_label"
         };
+
         // all CSV initialising the same way, if the content is unavailable ( AKA null ), add a "" to substitute
 
         try {
@@ -74,15 +86,16 @@ public class CsvLogger {
 
             if (value == null) {
                 base.add("");
-            }
-            if (value instanceof float[] floats) {
-                String logitToStr = saveLogits(floats);
-                base.add(logitToStr);
-            } else if (value instanceof Float f) {
-                String confidence = String.valueOf(f);
-                base.add(confidence);
-            } else if (value instanceof GazeClass gazeClass) {
-                base.add(gazeClass.name());
+            } else {
+                if (value instanceof float[] floats) {
+                    String logitToStr = saveLogits(floats);
+                    base.add(logitToStr);
+                } else if (value instanceof Float f) {
+                    String confidence = String.valueOf(f);
+                    base.add(confidence);
+                } else if (value instanceof GazeClass gazeClass) {
+                    base.add(gazeClass.name());
+                }
             }
         }
         base.add(""); // to substitute for the calibration column
@@ -110,6 +123,10 @@ public class CsvLogger {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public File getFile() {
+        return file;
     }
 }
 

@@ -51,7 +51,7 @@ public class ModelInference {
 // Finish interpreter initialization
             this.interpreter = interpreter;
         } catch (Exception e) {
-            // errrrr no choice ig need assume it works??
+            throw new RuntimeException("Failed to load model: " + modelAssetName, e);
         }
     }
 

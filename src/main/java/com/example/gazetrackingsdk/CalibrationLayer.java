@@ -9,7 +9,7 @@ import java.util.List;
 
 // note that the whole point of this layer is to find bias and temperature scaling
 // the formula imma use is to find the bias first then the temperature scaling so
-// ( logit + bias ) / scalar
+// logit / scalar + bias
 public class CalibrationLayer {
     private ArrayList<Integer> yTrueClass;
     // use array list if there is heavy indexing
