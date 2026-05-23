@@ -49,7 +49,7 @@ public class GazePrediction {
     }
 
     protected List<Object> getAll() {
-        ArrayList<Object> values = new ArrayList<>();
+        List<Object> values = new ArrayList<>();
         values.add(logitRaw);
         values.add(rawClass);
         values.add(confidenceRaw);
