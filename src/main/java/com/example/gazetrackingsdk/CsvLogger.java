@@ -12,6 +12,7 @@ import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 
 public class CsvLogger {
     private CSVWriter csvWriter;
@@ -68,17 +69,19 @@ public class CsvLogger {
         List<String> base = new ArrayList<String>(List.<String>of(String.valueOf(time)));
         ArrayList<Object> content = p.getAll();
         for (Object o : content) {
-            if (o == null) {
+            // since prediction now has optional fields
+            Object value = (o instanceof Optional<?> opt) ? opt.orElse(null) : o;
+
+            if (value == null) {
                 base.add("");
-                continue;
             }
-            if (o instanceof float[] floats) {
+            if (value instanceof float[] floats) {
                 String logitToStr = saveLogits(floats);
                 base.add(logitToStr);
-            } else if (o instanceof Float f) {
+            } else if (value instanceof Float f) {
                 String confidence = String.valueOf(f);
                 base.add(confidence);
-            } else if (o instanceof GazeClass gazeClass) {
+            } else if (value instanceof GazeClass gazeClass) {
                 base.add(gazeClass.name());
             }
         }

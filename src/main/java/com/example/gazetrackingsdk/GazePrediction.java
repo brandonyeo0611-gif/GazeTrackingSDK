@@ -2,17 +2,18 @@ package com.example.gazetrackingsdk;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class GazePrediction {
-    protected float[] logitRaw;
-    protected GazeClass rawClass;
-    protected float confidenceRaw;
-    protected float[] logitSmooth;
-    protected GazeClass smoothClass;
-    protected float confidenceSmooth;
-    protected GazeClass MVote;
+    private float[] logitRaw;
+    private GazeClass rawClass;
+    private final float confidenceRaw;
+    private final Optional<float[]> logitSmooth;
+    private final Optional<GazeClass> smoothClass;
+    private final Optional<Float> confidenceSmooth;
+    private final Optional<GazeClass> MVote;
 
-    public GazePrediction(float[] logitRaw, GazeClass rawClass, float confidenceRaw, float[] logitSmooth, GazeClass smoothClass, float confidenceSmooth, GazeClass mVote) {
+    public GazePrediction(float[] logitRaw, GazeClass rawClass, float confidenceRaw, Optional<float[]> logitSmooth, Optional<GazeClass> smoothClass, Optional<Float> confidenceSmooth, Optional<GazeClass> mVote) {
         this.logitRaw = logitRaw;
         this.rawClass = rawClass;
         this.confidenceRaw = confidenceRaw;
@@ -32,19 +33,19 @@ public class GazePrediction {
         return confidenceRaw;
     }
 
-    public float[] getLogitSmooth() {
+    public Optional<float[]> getLogitSmooth() {
         return logitSmooth;
     }
 
-    public GazeClass getSmoothClass() {
+    public Optional<GazeClass> getSmoothClass() {
         return smoothClass;
     }
 
-    public float getConfidenceSmooth() {
+    public Optional<Float> getConfidenceSmooth() {
         return confidenceSmooth;
     }
 
-    public GazeClass getMVote() {
+    public Optional<GazeClass> getMVote() {
         return MVote;
     }
 

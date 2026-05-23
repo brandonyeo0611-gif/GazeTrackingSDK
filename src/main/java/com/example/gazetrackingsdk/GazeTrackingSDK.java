@@ -10,6 +10,7 @@ import androidx.lifecycle.LifecycleOwner;
 
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
+import java.util.Optional;
 
 enum Mode {
     CALIBRATION,
@@ -78,6 +79,7 @@ public class GazeTrackingSDK implements FrameListener {
 
 
     public static class Builder {
+        // needs a assetname!!
         private final Context context;
         private final LifecycleOwner lifecycleOwner;
         private String modelAssetName;
@@ -209,7 +211,7 @@ public class GazeTrackingSDK implements FrameListener {
                 break;
 
             case PREDICTION:
-                float[] logitRaw; GazeClass rawClass; float confRaw; float[] logitSmooth = null; GazeClass smoothClass = null; Float confSmooth = null; GazeClass mVote = null;
+                float[] logitRaw; GazeClass rawClass; float confRaw; Optional<float[]> logitSmooth = Optional.empty(); Optional<GazeClass> smoothClass = Optional.empty(); Optional<Float> confSmooth = Optional.empty(); Optional<GazeClass> mVote = Optional.empty();
                 logitRaw = getRawLogitsInference(bitmap);
 
                 if (enableCalibration && calibrations != null) {
@@ -220,21 +222,21 @@ public class GazeTrackingSDK implements FrameListener {
                 rawClass = GazeClass.values()[confnPredRaw.second];
                 confRaw = confnPredRaw.first;
                 if (enableSmoothing) {
-                    logitSmooth = postprocessingLayer.applySmoothing(logitRaw);
-                    Pair<Float, Integer> confnPredSmooth = PostprocessingLayer.ConfnPred(logitSmooth);
-                    smoothClass = GazeClass.values()[confnPredSmooth.second];
-                    confSmooth = confnPredSmooth.first;
+                    logitSmooth = Optional.of(postprocessingLayer.applySmoothing(logitRaw));
+                    Pair<Float, Integer> confnPredSmooth = PostprocessingLayer.ConfnPred(logitSmooth.get());
+                    smoothClass = Optional.of(GazeClass.values()[confnPredSmooth.second]);
+                    confSmooth = Optional.of(confnPredSmooth.first);
                 }
 
 
                 // note that if smoothing is enabled, only apply mvote on smoothened one
                 if (enableMajorityVote) {
                     if (enableSmoothing) {
-                        int index = postprocessingLayer.applyRecencyWeightedVote(smoothClass.ordinal());
-                        mVote = GazeClass.values()[index];
+                        int index = postprocessingLayer.applyRecencyWeightedVote(smoothClass.get().ordinal());
+                        mVote = Optional.of(GazeClass.values()[index]);
                     } else {
                         int index = postprocessingLayer.applyRecencyWeightedVote(rawClass.ordinal());
-                        mVote = GazeClass.values()[index];
+                        mVote = Optional.of(GazeClass.values()[index]);
                     }
                 }
 
